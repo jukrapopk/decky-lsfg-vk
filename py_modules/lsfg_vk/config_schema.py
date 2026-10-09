@@ -23,7 +23,7 @@ PROFILE_DEFAULTS: Dict[str, Any] = {
     "pacing_mode": "vsync",
     "multiplier": 2,
     "flow_scale": 0.8,
-    "performance_mode": False,
+    "performance_mode": True,
     "override_present_mode": True,
     "preserve_swapchain_image_count": False,
 }
