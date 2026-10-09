@@ -93,6 +93,12 @@ class Plugin:
     ):
         return self.wrapper_service.set(appid, state, command_token_added, non_steam)
 
+    async def get_global_workarounds(self):
+        return self.wrapper_service.get_global()
+
+    async def set_global_workarounds(self, disable_ubwc: bool):
+        return self.wrapper_service.set_global(disable_ubwc)
+
     async def remove_workaround_state(self, appid: str):
         return self.wrapper_service.remove(appid)
 

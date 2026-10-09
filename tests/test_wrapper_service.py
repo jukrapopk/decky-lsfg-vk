@@ -36,6 +36,17 @@ class WrapperServiceTests(unittest.TestCase):
         state.update(changes)
         return state
 
+    def test_global_disable_ubwc_sets_tu_debug_for_all_games(self):
+        self.assertTrue(self.service.set_global(True)["success"])
+        for appid in ("1", "999"):
+            out = self._run(appid, "sh", "-c", 'printf %s "$TU_DEBUG"').stdout
+            self.assertEqual(out, "noubwc")
+        out = self._run("1", "sh", "-c", 'printf %s "$TU_DEBUG"', env={"TU_DEBUG": "nofdm"}).stdout
+        self.assertEqual(out, "nofdm,noubwc")
+        self.assertTrue(self.service.set_global(False)["success"])
+        self.assertEqual(self._run("1", "sh", "-c", 'printf %s "${TU_DEBUG-}"').stdout, "")
+        self.assertFalse(self.service.get_global()["disableUbwc"])
+
     def _run(self, appid, *args, env=None):
         process_env = {"PATH": "/usr/bin:/bin", "SteamAppId": str(appid)}
         if env:

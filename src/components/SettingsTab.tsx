@@ -1,5 +1,6 @@
 import { ButtonItem, DialogButton, Field, PanelSection, PanelSectionRow, ToggleField } from "@decky/ui";
-import { type GlobalConfig, type SteamBranchStatus } from "../api/lsfgApi";
+import { useEffect, useState } from "react";
+import { getGlobalWorkarounds, setGlobalWorkarounds, type GlobalConfig, type SteamBranchStatus } from "../api/lsfgApi";
 import t from "../i18n/i18n";
 import { showBranchSetupModal } from "./BranchSetupModal";
 
@@ -38,6 +39,21 @@ export function SettingsTab(props: SettingsTabProps) {
     onUninstall,
   } = props;
   const setupIncomplete = isInstalled && !setupComplete;
+  const [disableUbwc, setDisableUbwc] = useState(false);
+  useEffect(() => {
+    if (!isInstalled) return;
+    void getGlobalWorkarounds().then((r) => r?.success && setDisableUbwc(r.disableUbwc)).catch(() => undefined);
+  }, [isInstalled]);
+  const onUbwcChange = async (value: boolean) => {
+    const previous = disableUbwc;
+    setDisableUbwc(value);
+    try {
+      const r = await setGlobalWorkarounds(value);
+      if (!r?.success) setDisableUbwc(previous);
+    } catch {
+      setDisableUbwc(previous);
+    }
+  };
   const branchSetupIncomplete = Boolean(
     setupIncomplete && steamBranchStatus?.installed && steamBranchStatus.needs_switch,
   );
@@ -122,6 +138,14 @@ export function SettingsTab(props: SettingsTabProps) {
                 label="FP16 Acceleration"
                 checked={!globalConfig.no_fp16}
                 onChange={(value) => void onGlobalConfigChange({ ...globalConfig, no_fp16: !value })}
+              />
+            </PanelSectionRow>
+            <PanelSectionRow>
+              <ToggleField
+                label="Disable UBWC (Adreno/Turnip)"
+                description="Fixes Adreno corruption via TU_DEBUG=noubwc; may cost performance. Requires restart."
+                checked={disableUbwc}
+                onChange={(value) => void onUbwcChange(value)}
               />
             </PanelSectionRow>
           </PanelSection>

@@ -175,6 +175,11 @@ export const setWorkaroundState = callable<[
   boolean,
   boolean,
 ], WorkaroundStateResult>("set_workaround_state");
+export interface GlobalWorkaroundsResult extends ApiResult {
+  disableUbwc: boolean;
+}
+export const getGlobalWorkarounds = callable<[], GlobalWorkaroundsResult>("get_global_workarounds");
+export const setGlobalWorkarounds = callable<[boolean], GlobalWorkaroundsResult>("set_global_workarounds");
 export const removeWorkaroundState = callable<[string], WorkaroundStateResult>("remove_workaround_state");
 export const getWorkaroundApps = callable<[], WorkaroundAppsResult>("get_workaround_apps");
 export const getDebugFileContents = callable<[], DebugFileContentsResult>("get_debug_file_contents");

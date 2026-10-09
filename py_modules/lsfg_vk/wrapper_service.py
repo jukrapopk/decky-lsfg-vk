@@ -110,10 +110,20 @@ class WrapperService(BaseService):
             if normalized != str(appid):
                 raise ValueError("Workaround AppIDs must not contain leading zeroes")
             validated_apps[normalized] = cls._validate_entry(entry)
-        return {"version": cls.FORMAT_VERSION, "apps": validated_apps}
+        raw_global = raw.get("global", {})
+        if not isinstance(raw_global, dict):
+            raise ValueError("Workaround global state must be an object")
+        disable_ubwc = raw_global.get("disableUbwc", False)
+        if type(disable_ubwc) is not bool:
+            raise ValueError("disableUbwc must be a boolean")
+        return {
+            "version": cls.FORMAT_VERSION,
+            "apps": validated_apps,
+            "global": {"disableUbwc": disable_ubwc},
+        }
 
     def _empty_document(self) -> Dict[str, Any]:
-        return {"version": self.FORMAT_VERSION, "apps": {}}
+        return {"version": self.FORMAT_VERSION, "apps": {}, "global": {"disableUbwc": False}}
 
     def _read_document(self) -> Tuple[Dict[str, Any], bool, Optional[str]]:
         if not self.sidecar_path.exists():
@@ -212,8 +222,15 @@ class WrapperService(BaseService):
             '    *) appid="${STEAM_COMPAT_APP_ID}" ;;',
             "  esac",
             "fi",
-            'case "$appid" in',
         ]
+        if document.get("global", {}).get("disableUbwc"):
+            # Turnip (Adreno): disable UBWC framebuffer compression for every
+            # lsfg-wrapped game. Appends to any TU_DEBUG the user already set.
+            lines.extend([
+                'TU_DEBUG="${TU_DEBUG:+$TU_DEBUG,}noubwc"',
+                "export TU_DEBUG",
+            ])
+        lines.append('case "$appid" in')
         for appid in sorted(document["apps"], key=lambda value: int(value)):
             lines.append(f"  {appid})")
             lines.extend(self._state_lines(document["apps"][appid]["state"]))
@@ -346,12 +363,34 @@ class WrapperService(BaseService):
                 "non_steam": False,
             }
 
+    def get_global(self) -> Dict[str, Any]:
+        try:
+            with self._lock:
+                document, _, _ = self._read_document()
+                self._assert_wrapper_owned_or_absent()
+                return {"success": True, "error": None, "disableUbwc": document["global"]["disableUbwc"]}
+        except Exception as error:
+            return {"success": False, "error": str(error), "disableUbwc": False}
+
+    def set_global(self, disable_ubwc: bool) -> Dict[str, Any]:
+        try:
+            if type(disable_ubwc) is not bool:
+                raise ValueError("disableUbwc must be a boolean")
+            with self._lock:
+                self._assert_wrapper_owned_or_absent()
+                document, _, _ = self._read_document()
+                document["global"] = {"disableUbwc": disable_ubwc}
+                self._write_pair(document)
+                return {"success": True, "error": None, "disableUbwc": disable_ubwc}
+        except Exception as error:
+            return {"success": False, "error": str(error), "disableUbwc": False}
+
     def repair(self) -> Dict[str, Any]:
         try:
             with self._lock:
                 document, _, _ = self._read_document()
                 self._assert_wrapper_owned_or_absent()
-                if not document["apps"]:
+                if not document["apps"] and not document["global"]["disableUbwc"]:
                     return self._response(document)
                 self._write_file(self.wrapper_path, self._render_wrapper(document), 0o755)
                 return self._response(document)
