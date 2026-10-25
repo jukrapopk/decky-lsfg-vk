@@ -38,6 +38,8 @@ class WrapperServiceTests(unittest.TestCase):
 
     def test_global_disable_ubwc_sets_tu_debug_for_all_games(self):
         self.assertTrue(self.service.set_global(True)["success"])
+        # The wrapper is owned even when only the global workaround is set.
+        self.assertTrue(self.service.get("1")["wrapper_owned"])
         for appid in ("1", "999"):
             out = self._run(appid, "sh", "-c", 'printf %s "$TU_DEBUG"').stdout
             self.assertEqual(out, "noubwc")
