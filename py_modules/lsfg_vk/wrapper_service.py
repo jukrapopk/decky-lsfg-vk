@@ -280,7 +280,7 @@ class WrapperService(BaseService):
             "appid": appid or None,
             "state": dict(entry["state"]) if entry else None,
             "wrapper_path": self.WRAPPER_TOKEN,
-            "wrapper_owned": self._wrapper_marker() if document["apps"] else False,
+            "wrapper_owned": self._wrapper_marker() if (document["apps"] or document["global"]["disableUbwc"]) else False,
             "command_token_added": entry.get("command_token_added", False) if entry else False,
             "non_steam": entry.get("non_steam", False) if entry else False,
         }
